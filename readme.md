@@ -926,39 +926,140 @@ RustShortcuts is designed to run silently in the background, start automatically
 
 
 
-## changing the rust code for a new build:
-# 1. Build the new release
+## Changing the Rust code for a new build
+
+### 1. Build the new release
+
+```bash
 cargo build --release
+```
 
-# 2. Stop the currently running LaunchAgent
-launchctl kickstart -k gui/$(id -u)/com.rust-shortcuts
+### 2. Stop the LaunchAgent
 
-# 3. Copy the new binary into the app
+```bash
+launchctl kill SIGTERM gui/$(id -u)/com.rust-shortcuts
+```
+
+### 3. Make absolutely sure the old process is gone
+
+```bash
+pkill -f 'rust_shortcuts' || true
+```
+
+### 4. Verify nothing is running
+
+```bash
+pgrep -af rust_shortcuts || echo "No rust_shortcuts process running"
+```
+
+### 5. Copy the new binary
+
+```bash
 cp target/release/rust_shortcuts \
   ~/Applications/RustShortcuts.app/Contents/MacOS/rust_shortcuts
+```
 
-# 4. Make sure it's executable
+### 6. Make sure it's executable
+
+```bash
 chmod +x \
   ~/Applications/RustShortcuts.app/Contents/MacOS/rust_shortcuts
+```
 
-# 5. Re-sign the changed executable
+### 7. Re-sign the changed executable
+
+```bash
 codesign --force --sign - \
   ~/Applications/RustShortcuts.app/Contents/MacOS/rust_shortcuts
+```
 
-# 6. Re-sign the app bundle
-codesign --force --sign - \
+### 8. Re-sign the entire app
+
+```bash
+codesign --force --deep --sign - \
   ~/Applications/RustShortcuts.app
+```
 
-# 7. Verify the app
+### 9. Verify the app signature
+
+```bash
 codesign --verify --deep --strict --verbose=2 \
   ~/Applications/RustShortcuts.app
+```
 
-# 8. Restart the LaunchAgent
+### 10. Reset macOS privacy permissions
+
+If the app stopped receiving keyboard events after replacing/re-signing the binary:
+
+```bash
+tccutil reset ListenEvent
+```
+
+If necessary, also reset Accessibility:
+
+```bash
+tccutil reset Accessibility
+```
+
+### 11. Re-enable permissions in System Settings
+
+Go to:
+
+**System Settings → Privacy & Security → Input Monitoring**
+
+* Find **RustShortcuts**
+* Turn it **OFF**
+* Turn it **ON** again
+* If it isn't listed, use `+` and add:
+
+```text
+~/Applications/RustShortcuts.app
+```
+
+Also check:
+
+**System Settings → Privacy & Security → Accessibility**
+
+Make sure **RustShortcuts** is enabled there too.
+
+### 12. Restart the LaunchAgent
+
+```bash
 launchctl kickstart -k gui/$(id -u)/com.rust-shortcuts
+```
 
-# 9. Confirm it's running
-launchctl print gui/$(id -u)/com.rust-shortcuts | \
-  grep -E "state|program|runs|last terminating"
+### 13. Give it a second
 
-# 10. Confirm the actual process
-ps aux | grep '[r]ust_shortcuts'
+```bash
+sleep 1
+```
+
+### 14. Check the actual process
+
+```bash
+pgrep -af rust_shortcuts
+```
+
+### 15. Check LaunchAgent state
+
+```bash
+launchctl print gui/$(id -u)/com.rust-shortcuts
+```
+
+You want to see:
+
+```text
+state = running
+```
+
+and a current:
+
+```text
+pid = ...
+```
+
+The `program` should point to:
+
+```text
+/Users/YOUR_USERNAME/Applications/RustShortcuts.app/Contents/MacOS/rust_shortcuts
+```
