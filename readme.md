@@ -927,6 +927,7 @@ RustShortcuts is designed to run silently in the background, start automatically
 
 
 ## Changing the Rust code for a new build
+### If Alt+Tab doesnt work on mac, quit the app and run it again - usually youll just have to reenable a permission lol
 
 ### 1. Build the new release
 

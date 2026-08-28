@@ -43,6 +43,10 @@ fn callback(event: Event, shortcuts: &[ShortcutStruct], pressed_keys: &Arc<Mutex
         EventType::KeyPress(key) => {
             let mut keys = pressed_keys.lock().unwrap();
 
+            if is_system_shortcut(&keys, key) {
+                return;
+            }
+
             if !keys.contains(&key) {
                 keys.push(key);
             }
@@ -84,11 +88,24 @@ fn shortcut_matches(keys: &[Key], shortcut: &[String]) -> bool {
             _ => k_list::all()
                 .get(key.as_str())
                 .is_some_and(|key| keys.contains(key)),
-
-            _ => false,
         })
 }
 
+fn is_system_shortcut(keys: &[Key], pressed_key: Key) -> bool {
+    let holding_command = keys.contains(&Key::MetaLeft) || keys.contains(&Key::MetaRight);
+    let holding_option = keys.contains(&Key::Alt);
+    let holding_control = keys.contains(&Key::ControlLeft) || keys.contains(&Key::ControlRight);
+
+    if !holding_command {
+        return false;
+    }
+
+    match pressed_key {
+        Key::Tab if !holding_option && !holding_control => true,
+        Key::BackQuote if !holding_option && !holding_control => true,
+        _ => false,
+    }
+}
 
 fn launch_program(program: &str) {
     let result = Command::new("open").args(["-a", program]).spawn();
